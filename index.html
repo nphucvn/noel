@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Noel 🎄</title>
+<style>
+html,body{
+margin:0;
+background:radial-gradient(circle at top,#0b1d3a,#02040a,#000);
+font-family:"Segoe UI",sans-serif;
+color:white;
+overflow-x:hidden;
+}
+.section{
+min-height:100vh;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+position:relative;
+}
+canvas{
+display:block;
+margin:auto;
+}
+.message{
+max-width:92%;
+background:rgba(0,0,0,.6);
+padding:28px;
+border-radius:20px;
+line-height:2;
+font-size:17px;
+box-shadow:0 0 40px rgba(255,255,255,.25);
+backdrop-filter:blur(6px);
+}
+.hint{
+opacity:.65;
+font-size:14px;
+margin-top:18px;
+}
+</style>
+</head>
+<body>
+
+<div class="section">
+<canvas id="c"></canvas>
+<div class="hint">❄️ Cây thông Noel đang lung linh – kéo xuống để đọc lời chúc ❄️</div>
+</div>
+
+<div class="section">
+<div class="message">
+🎄 <b>Chúc Thảo Noel vui vẻ</b> 🎄<br><br>
+Gặp nhiều may mắn, thuận lợi<br>
+trên con đường mà bạn đã chọn.<br><br>
+Cảm ơn bạn khi đã kéo Phúc<br>
+ra nơi tối tăm ấy! ✨
+</div>
+</div>
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+/* ===== SAO NỀN ===== */
+let stars=[];
+for(let i=0;i<250;i++){
+stars.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+r:Math.random()*1.2,
+a:Math.random()
+});
+}
+
+/* ===== TUYẾT ===== */
+let snow=[];
+for(let i=0;i<200;i++){
+snow.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+r:Math.random()*2+0.5,
+s:Math.random()*0.6+0.2
+});
+}
+
+/* ===== CÂY THÔNG ===== */
+let particles=[];
+const H=canvas.height*0.75;
+const baseY=canvas.height*0.9;
+
+for(let i=0;i<3000;i++){
+let t=Math.random();
+particles.push({
+t,
+angle:Math.random()*Math.PI*2,
+speed:Math.random()*0.02+0.005,
+size:Math.random()*3+0.6,
+color:`hsl(${Math.random()*360},100%,70%)`
+});
+}
+
+let time=0;
+
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+/* sao */
+for(let s of stars){
+ctx.globalAlpha=s.a;
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+ctx.fill();
+s.a+=Math.random()*0.02-0.01;
+if(s.a<0.1) s.a=0.1;
+if(s.a>1) s.a=1;
+}
+ctx.globalAlpha=1;
+
+/* tuyết */
+for(let f of snow){
+ctx.fillStyle="rgba(255,255,255,.8)";
+ctx.beginPath();
+ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+ctx.fill();
+f.y+=f.s;
+if(f.y>canvas.height){
+f.y=-10;
+f.x=Math.random()*canvas.width;
+}
+}
+
+/* cây */
+let sway=Math.sin(time)*50;
+let cx=canvas.width/2+sway;
+
+for(let p of particles){
+let y=baseY - p.t*H;
+let radius=(1-p.t)*260;
+p.angle+=p.speed;
+
+let x=cx+Math.cos(p.angle)*radius;
+let z=Math.sin(p.angle)*radius;
+let scale=(z+300)/600;
+
+ctx.beginPath();
+ctx.fillStyle=p.color;
+ctx.shadowColor=p.color;
+ctx.shadowBlur=18*scale;
+ctx.globalAlpha=scale;
+ctx.arc(x,y,p.size*scale,0,Math.PI*2);
+ctx.fill();
+}
+ctx.globalAlpha=1;
+ctx.shadowBlur=0;
+
+/* thân */
+ctx.fillStyle="#7b5a3a";
+ctx.fillRect(cx-18,baseY,36,90);
+
+/* sao đỉnh */
+ctx.font="40px serif";
+ctx.textAlign="center";
+ctx.shadowColor="gold";
+ctx.shadowBlur=35;
+ctx.fillStyle="gold";
+ctx.fillText("⭐",cx,baseY-H-50);
+ctx.shadowBlur=0;
+
+time+=0.01;
+requestAnimationFrame(draw);
+}
+draw();
+</script>
+
+</body>
+</html>
