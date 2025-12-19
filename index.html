@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noel 🎄</title>
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  background:radial-gradient(circle at top,#0a1a2f,#000814);
+  overflow-x:hidden;
+  color:#fff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Tuyết */
+.snow{
+  position:fixed;
+  top:-10px;
+  width:6px;
+  height:6px;
+  background:white;
+  border-radius:50%;
+  opacity:0.8;
+  animation: fall linear infinite;
+}
+@keyframes fall{
+  to{ transform:translateY(110vh); }
+}
+
+/* Canvas */
+canvas{
+  display:block;
+  margin:auto;
+}
+
+/* Lời chúc */
+.message{
+  max-width:90%;
+  margin:40px auto 80px;
+  font-size:18px;
+  line-height:1.7;
+  text-align:center;
+  background:rgba(255,255,255,0.08);
+  padding:20px;
+  border-radius:16px;
+  backdrop-filter:blur(6px);
+  box-shadow:0 0 20px rgba(255,255,255,0.15);
+}
+.hint{
+  text-align:center;
+  opacity:0.8;
+  margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="tree" width="360" height="520"></canvas>
+<div class="hint">❄️ Cây thông Noel – kéo xuống để đọc lời chúc ❄️</div>
+
+<div class="message">
+🎄 <b>Chúc Thảo Noel vui vẻ</b> 🎄<br><br>
+Gặp nhiều may mắn, thuận lợi trên con đường mà bạn đã chọn.<br>
+Cảm ơn bạn khi đã kéo Phúc ra khỏi nơi tối tăm ấy.<br><br>
+✨ Mong rằng Giáng Sinh này sẽ mang đến cho bạn thật nhiều niềm vui,
+bình an và những điều tốt đẹp nhất ✨
+</div>
+
+<script>
+/* Vẽ cây thông */
+const c=document.getElementById("tree");
+const ctx=c.getContext("2d");
+const lights=[];
+for(let i=0;i<1200;i++){
+  lights.push({
+    a:Math.random()*Math.PI*2,
+    r:Math.random()*200,
+    y:Math.random()*420,
+    s:Math.random()*1.5+0.5,
+    c:`hsl(${Math.random()*360},100%,70%)`
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,c.width,c.height);
+
+  // thân cây
+  ctx.fillStyle="#8b5a2b";
+  ctx.fillRect(c.width/2-20,420,40,80);
+
+  // sao
+  ctx.fillStyle="gold";
+  ctx.beginPath();
+  ctx.arc(c.width/2,50,10,0,Math.PI*2);
+  ctx.fill();
+
+  lights.forEach(p=>{
+    const x=c.width/2+Math.sin(p.a)*p.r*0.3;
+    const y=80+p.y*0.8;
+    ctx.fillStyle=p.c;
+    ctx.globalAlpha=0.5+Math.sin(Date.now()/300+p.a)*0.5;
+    ctx.beginPath();
+    ctx.arc(x,y,p.s,0,Math.PI*2);
+    ctx.fill();
+    p.a+=0.002;
+  });
+
+  ctx.globalAlpha=1;
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* Tuyết rơi */
+for(let i=0;i<80;i++){
+  const s=document.createElement("div");
+  s.className="snow";
+  s.style.left=Math.random()*100+"vw";
+  s.style.animationDuration=5+Math.random()*5+"s";
+  s.style.opacity=Math.random();
+  s.style.transform=`scale(${Math.random()})`;
+  document.body.appendChild(s);
+}
+</script>
+</body>
+</html>
