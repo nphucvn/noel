@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cây Thông Noel 🎄</title>
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(circle at top, #0b1d33, #02040a);
+        height: 100%;
+        overflow: hidden;
+        font-family: 'Segoe UI', sans-serif;
+        color: white;
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .message {
+        position: absolute;
+        bottom: 6%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 500px;
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(8px);
+        border-radius: 16px;
+        padding: 18px;
+        text-align: center;
+        animation: fadeIn 2s ease forwards;
+    }
+
+    .message h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+    }
+
+    .message p {
+        font-size: 15px;
+        line-height: 1.6;
+        margin: 6px 0;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translate(-50%, 20px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+    }
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="message">
+    <h2>🎄 Chúc Thảo Noel vui vẻ 🎄</h2>
+    <p>
+        Gặp nhiều may mắn, thuận lợi trên con đường mà bạn đã chọn.<br>
+        Cảm ơn bạn khi đã kéo Phúc ra khỏi nơi tối tăm ấy.
+    </p>
+    <p>✨ Mong rằng Giáng Sinh này sẽ mang đến cho bạn thật nhiều niềm vui, bình an và những điều tốt đẹp nhất ✨</p>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// Tuyết
+const snowflakes = [];
+for (let i = 0; i < 200; i++) {
+    snowflakes.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1,
+        d: Math.random() + 0.5
+    });
+}
+
+// Hạt cây thông
+const particles = [];
+const treeHeight = canvas.height * 0.55;
+const baseWidth = canvas.width * 0.4;
+const centerX = canvas.width / 2;
+
+for (let i = 0; i < 1200; i++) {
+    const y = Math.random() * treeHeight;
+    const widthAtY = (y / treeHeight) * baseWidth;
+    const x = centerX + (Math.random() - 0.5) * widthAtY;
+
+    particles.push({
+        x,
+        y: canvas.height * 0.15 + y,
+        size: Math.random() * 1.8 + 0.6,
+        color: `hsl(${Math.random()*360},100%,70%)`,
+        speed: Math.random() * 0.5 + 0.2
+    });
+}
+
+function drawSnow() {
+    ctx.fillStyle = "white";
+    snowflakes.forEach(f => {
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+        f.y += f.d;
+        if (f.y > canvas.height) {
+            f.y = -5;
+            f.x = Math.random() * canvas.width;
+        }
+    });
+}
+
+function drawTree() {
+    particles.forEach(p => {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        p.y -= p.speed;
+        if (p.y < canvas.height * 0.15) {
+            p.y = canvas.height * 0.15 + treeHeight;
+        }
+    });
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawSnow();
+    drawTree();
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+
+</body>
+</html>
