@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Noel 🎄</title>
+<style>
+html,body{
+margin:0;
+background:#000814;
+overflow:hidden;
+font-family:sans-serif;
+color:white;
+}
+canvas{
+display:block;
+margin:auto;
+}
+.text{
+position:absolute;
+bottom:20px;
+width:100%;
+text-align:center;
+opacity:.6;
+font-size:14px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div class="text">❄️ Cây thông đang chuyển động ❄️</div>
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+function resize(){
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+let particles=[];
+const H=canvas.height*0.75;
+const baseY=canvas.height*0.9;
+
+for(let i=0;i<2000;i++){
+let t=Math.random();
+particles.push({
+t,
+angle:Math.random()*Math.PI*2,
+speed:Math.random()*0.02+0.01,
+size:Math.random()*2+0.6,
+color:`hsl(${Math.random()*360},100%,70%)`
+});
+}
+
+let time=0;
+
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+let sway=Math.sin(time)*40;
+let cx=canvas.width/2+sway;
+
+for(let p of particles){
+let y=baseY - p.t*H;
+let radius=(1-p.t)*220;
+p.angle+=p.speed;
+
+let x=cx+Math.cos(p.angle)*radius;
+let z=Math.sin(p.angle)*radius;
+let scale=(z+250)/500;
+
+ctx.beginPath();
+ctx.fillStyle=p.color;
+ctx.globalAlpha=scale;
+ctx.arc(x,y,p.size*scale,0,Math.PI*2);
+ctx.fill();
+}
+ctx.globalAlpha=1;
+
+/* thân */
+ctx.fillStyle="#7b5a3a";
+ctx.fillRect(cx-15,baseY,30,80);
+
+/* tim */
+ctx.save();
+ctx.translate(cx,baseY-H-30);
+ctx.scale(1+Math.sin(time*3)*0.1,1+Math.sin(time*3)*0.1);
+ctx.fillStyle="pink";
+ctx.beginPath();
+ctx.moveTo(0,10);
+ctx.bezierCurveTo(-20,-10,-40,10,0,40);
+ctx.bezierCurveTo(40,10,20,-10,0,10);
+ctx.fill();
+ctx.restore();
+
+/* sao */
+ctx.font="32px serif";
+ctx.textAlign="center";
+ctx.fillStyle="gold";
+ctx.fillText("⭐",cx,baseY-H-70);
+
+time+=0.01;
+requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
