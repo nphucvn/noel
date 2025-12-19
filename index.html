@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noel Vui Vẻ 🎄</title>
+<style>
+body{
+margin:0;height:100vh;
+background:linear-gradient(#00111a,#00334d);
+display:flex;flex-direction:column;
+align-items:center;justify-content:center;
+color:white;font-family:Arial,sans-serif;
+overflow:hidden;text-align:center}
+.tree{position:relative;width:0;height:0;
+border-left:120px solid transparent;
+border-right:120px solid transparent;
+border-bottom:200px solid #0f9d58}
+.tree:before{content:"";position:absolute;
+top:40px;left:-100px;width:0;height:0;
+border-left:100px solid transparent;
+border-right:100px solid transparent;
+border-bottom:160px solid #0b8043}
+.tree:after{content:"";position:absolute;
+top:90px;left:-80px;width:0;height:0;
+border-left:80px solid transparent;
+border-right:80px solid transparent;
+border-bottom:120px solid #0a6b37}
+.star{position:absolute;top:-35px;left:-18px;
+font-size:36px;color:gold}
+.trunk{width:40px;height:60px;
+background:#8d6e63;margin:auto;border-radius:5px}
+.message{margin-top:25px;padding:15px;
+font-size:16px;line-height:1.6}
+.snow{position:absolute;top:-10px;color:white;
+animation:snow 5s linear infinite}
+@keyframes snow{to{transform:translateY(110vh)}}
+</style>
+</head>
+<body>
+
+<div class="tree"><div class="star">⭐</div></div>
+<div class="trunk"></div>
+
+<div class="message">
+🎄 <b>Chúc Thảo Noel vui vẻ</b> 🎄<br>
+Gặp nhiều may mắn, thuận lợi<br>
+trên con đường mà bạn đã chọn.<br><br>
+Cảm ơn bạn khi đã kéo Phúc<br>
+ra nơi tối tăm ấy! ✨
+</div>
+
+<script>
+for(let i=0;i<30;i++){
+let s=document.createElement("div");
+s.className="snow";
+s.innerHTML="❄";
+s.style.left=Math.random()*100+"vw";
+s.style.fontSize=10+Math.random()*10+"px";
+s.style.animationDuration=3+Math.random()*5+"s";
+document.body.appendChild(s)}
+</script>
+
+</body>
+</html>
