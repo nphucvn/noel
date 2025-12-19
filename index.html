@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Noel 🎄</title>
+<style>
+html,body{
+margin:0;
+background:radial-gradient(circle at top,#020b18,#000);
+font-family:"Segoe UI",sans-serif;
+color:white;
+overflow-x:hidden;
+}
+canvas{
+display:block;
+margin:auto;
+}
+.section{
+min-height:100vh;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+}
+.message{
+max-width:90%;
+background:rgba(0,0,0,.55);
+padding:25px;
+border-radius:18px;
+line-height:1.9;
+font-size:17px;
+box-shadow:0 0 30px rgba(255,255,255,.2);
+}
+.hint{
+opacity:.6;
+font-size:14px;
+margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<div class="section">
+<canvas id="c"></canvas>
+<div class="hint">❄️ Cây thông đang chuyển động – kéo xuống để đọc lời chúc ❄️</div>
+</div>
+
+<div class="section">
+<div class="message">
+🎄 <b>Chúc Thảo Noel vui vẻ</b> 🎄<br><br>
+Gặp nhiều may mắn, thuận lợi<br>
+trên con đường mà bạn đã chọn.<br><br>
+Cảm ơn bạn khi đã kéo Phúc<br>
+ra nơi tối tăm ấy! ✨
+</div>
+</div>
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+function resize(){
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+let particles=[];
+const H=canvas.height*0.75;
+const baseY=canvas.height*0.9;
+
+for(let i=0;i<2600;i++){
+let t=Math.random();
+particles.push({
+t,
+angle:Math.random()*Math.PI*2,
+speed:Math.random()*0.02+0.005,
+size:Math.random()*2.8+0.6,
+color:`hsl(${Math.random()*360},100%,70%)`
+});
+}
+
+let time=0;
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+let sway=Math.sin(time)*45;
+let cx=canvas.width/2+sway;
+
+for(let p of particles){
+let y=baseY - p.t*H;
+let radius=(1-p.t)*240;
+p.angle+=p.speed;
+
+let x=cx+Math.cos(p.angle)*radius;
+let z=Math.sin(p.angle)*radius;
+let scale=(z+260)/520;
+
+ctx.beginPath();
+ctx.fillStyle=p.color;
+ctx.shadowColor=p.color;
+ctx.shadowBlur=12*scale;
+ctx.globalAlpha=scale;
+ctx.arc(x,y,p.size*scale,0,Math.PI*2);
+ctx.fill();
+}
+ctx.globalAlpha=1;
+ctx.shadowBlur=0;
+
+/* thân cây */
+ctx.fillStyle="#7b5a3a";
+ctx.fillRect(cx-16,baseY,32,85);
+
+/* sao */
+ctx.font="36px serif";
+ctx.textAlign="center";
+ctx.shadowColor="gold";
+ctx.shadowBlur=25;
+ctx.fillStyle="gold";
+ctx.fillText("⭐",cx,baseY-H-40);
+ctx.shadowBlur=0;
+
+time+=0.01;
+requestAnimationFrame(draw);
+}
+draw();
+</script>
+
+</body>
+</html>
