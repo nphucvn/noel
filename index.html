@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Ultra HD Christmas Tree</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #010309;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        /* Ô vuông nhỏ góc trên bên phải - Hiệu ứng lòe loẹt neon tỏa sáng */
+        #cam-box {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+            z-index: 20;
+            overflow: hidden;
+            padding: 3px;
+            background: linear-gradient(45deg, #ff007f, #00f0ff, #00ff66, #ff00ff);
+            background-size: 300% 300%;
+            animation: colorfulGlow 3s ease infinite;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.8), 0 0 40px rgba(255, 0, 127, 0.5);
+        }
+
+        @keyframes colorfulGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 13px;
+            transform: scaleX(-1);
+        }
+
+        /* Card hiển thị Lời Chúc & Album Ảnh */
+        .overlay-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.7);
+            background: rgba(8, 16, 35, 0.9);
+            border: 2px solid rgba(0, 240, 255, 0.6);
+            box-shadow: 0 0 50px rgba(0, 200, 255, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 25px;
+            text-align: center;
+            color: #fff;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            width: 350px;
+        }
+
+        .overlay-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .overlay-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.5);
+        }
+
+        .overlay-card h2 {
+            font-size: 24px;
+            color: #8ae5ff;
+            text-shadow: 0 0 15px #00a2ff, 0 0 30px #00f0ff;
+            margin-bottom: 10px;
+        }
+
+        .overlay-card p {
+            font-size: 15px;
+            color: #e0f4ff;
+            line-height: 1.6;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div id="webgl-container"></div>
+    
+    <!-- Ô vuông nhỏ góc trên bên phải với viền neon cầu vồng -->
+    <div id="cam-box">
+        <video id="webcam" playsinline></video>
+    </div>
+
+    <!-- Lời Chúc (Giơ ngón cái 👍) -->
+    <div class="overlay-card" id="wish-card">
+        <img src="https://images.unsplash.com/photo-1543589077-47d51606c1bf?auto=format&fit=crop&w=600&q=80" alt="Merry Christmas">
+        <h2>Merry Christmas! 🎄✨</h2>
+        <p>Chúc bạn một mùa Giáng Sinh ấm áp, rực rỡ hạnh phúc, an lành và tràn ngập niềm vui bên gia đình & người thân!</p>
+    </div>
+
+    <!-- Album Ảnh (Mở bàn tay 🖐️) -->
+    <div class="overlay-card" id="gallery-card">
+        <img src="https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&w=600&q=80" alt="Christmas Lights">
+        <h2>Khoảnh Khắc Đêm Noel ❄️</h2>
+        <p>Giữ trọn những khoảnh khắc đẹp đẽ, lung linh nhất của mùa đông!</p>
+    </div>
+
+    <script>
+        // --- 1. SETUP THREE.JS SCENE ---
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x010309, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 36);
+        camera.lookAt(0, 12, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        // --- 2. TEXTURE HẠT ÁNH SÁNG SIÊU NÉT ---
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.2, 'rgba(220,248,255,0.95)');
+            gradient.addColorStop(0.5, 'rgba(0,180,255,0.5)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+        const particleTexture = createGlowTexture();
+
+        // --- 3. DỰNG CÂY THÔNG 3D BẰNG 25,000 HẠT LIGHT ULTRA HD ---
+        const particleCount = 25000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const originalPositions = new Float32Array(particleCount * 3);
+        const dispersedPositions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        const treeHeight = 25;
+        const baseRadius = 10.5;
+
+        for (let i = 0; i < particleCount; i++) {
+            const ratio = Math.pow(Math.random(), 1.25);
+            const y = ratio * treeHeight;
+            const radius = (1 - ratio) * baseRadius * (0.85 + Math.random() * 0.35);
+            const angle = Math.random() * Math.PI * 2;
+
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+
+            // Vị trí gốc cây thông
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            originalPositions[i * 3] = x;
+            originalPositions[i * 3 + 1] = y;
+            originalPositions[i * 3 + 2] = z;
+
+            // Vị trí tản ra khi mở bàn tay
+            const disperseRadius = radius * (2.5 + Math.random() * 2);
+            dispersedPositions[i * 3] = Math.cos(angle) * disperseRadius;
+            dispersedPositions[i * 3 + 1] = y + (Math.random() - 0.5) * 8;
+            dispersedPositions[i * 3 + 2] = Math.sin(angle) * disperseRadius;
+
+            // Phối màu sắc nét
+            const color = new THREE.Color();
+            const colorRand = Math.random();
+            if (colorRand > 0.75) {
+                color.setHSL(0.53, 1.0, 0.85); // Xanh lam sáng lấp lánh
+            } else if (colorRand > 0.35) {
+                color.setHSL(0.5, 0.2, 0.98);  // Trắng bạc băng giá
+            } else {
+                color.setHSL(0.58, 0.9, 0.7);  // Xanh sapphire
+            }
+
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = Math.random() * 0.45 + 0.15;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.38,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const treeParticles = new THREE.Points(geometry, material);
+        scene.add(treeParticles);
+
+        // --- 4. NGÔI SAO SIÊU NÉT TRÊN ĐỈNH ---
+        const starGroup = new THREE.Group();
+        starGroup.position.set(0, treeHeight + 1.2, 0);
+
+        const starCoreGeo = new THREE.OctahedronGeometry(1.5, 0);
+        const starCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const starCore = new THREE.Mesh(starCoreGeo, starCoreMat);
+        starGroup.add(starCore);
+
+        const starGlowMat = new THREE.SpriteMaterial({
+            map: particleTexture,
+            color: 0x88eeff,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const starGlow = new THREE.Sprite(starGlowMat);
+        starGlow.scale.set(12, 12, 1);
+        starGroup.add(starGlow);
+
+        scene.add(starGroup);
+
+        // --- 5. DẢI ÁNH SÁNG XOẮN ỐC ---
+        const spiralCount = 1800;
+        const spiralGeo = new THREE.BufferGeometry();
+        const spiralPos = new Float32Array(spiralCount * 3);
+        const spiralColors = new Float32Array(spiralCount * 3);
+
+        for (let i = 0; i < spiralCount; i++) {
+            const t = i / spiralCount;
+            const y = t * treeHeight;
+            const angle = t * Math.PI * 18; 
+            const radius = (1 - t) * (baseRadius + 0.6);
+
+            spiralPos[i * 3] = Math.cos(angle) * radius;
+            spiralPos[i * 3 + 1] = y;
+            spiralPos[i * 3 + 2] = Math.sin(angle) * radius;
+
+            const c = new THREE.Color().setHSL(0.52, 1.0, 0.85);
+            spiralColors[i * 3] = c.r;
+            spiralColors[i * 3 + 1] = c.g;
+            spiralColors[i * 3 + 2] = c.b;
+        }
+
+        spiralGeo.setAttribute('position', new THREE.BufferAttribute(spiralPos, 3));
+        spiralGeo.setAttribute('color', new THREE.BufferAttribute(spiralColors, 3));
+
+        const spiralMat = new THREE.PointsMaterial({
+            size: 0.6,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const spiralPoints = new THREE.Points(spiralGeo, spiralMat);
+        scene.add(spiralPoints);
+
+        // --- 6. TUYẾT RƠI LUNG LINH ---
+        const snowCount = 2000;
+        const snowGeo = new THREE.BufferGeometry();
+        const snowPos = new Float32Array(snowCount * 3);
+
+        for (let i = 0; i < snowCount; i++) {
+            snowPos[i * 3] = (Math.random() - 0.5) * 60;
+            snowPos[i * 3 + 1] = Math.random() * 50;
+            snowPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+        }
+
+        snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+        const snowMat = new THREE.PointsMaterial({
+            size: 0.25,
+            color: 0xffffff,
+            map: particleTexture,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
+
+        const snowParticles = new THREE.Points(snowGeo, snowMat);
+        scene.add(snowParticles);
+
+        // --- 7. ANIMATION & HIỆU ỨNG TẢN CÂY ---
+        let spiralProgress = 0;
+        let isDispersed = false;
+        let disperseFactor = 0; // 0 là tụ thành cây, 1 là tản ra
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Xoay cây thông & ngôi sao
+            treeParticles.rotation.y = elapsedTime * 0.12;
+            spiralPoints.rotation.y = elapsedTime * 0.12;
+            starGroup.rotation.y = -elapsedTime * 0.4;
+
+            // Xử lý chuyển đổi tản ra / tụ lại
+            const targetFactor = isDispersed ? 1 : 0;
+            disperseFactor += (targetFactor - disperseFactor) * 0.05;
+
+            const posArr = treeParticles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const ox = originalPositions[i * 3];
+                const oy = originalPositions[i * 3 + 1];
+                const oz = originalPositions[i * 3 + 2];
+
+                const dx = dispersedPositions[i * 3];
+                const dy = dispersedPositions[i * 3 + 1];
+                const dz = dispersedPositions[i * 3 + 2];
+
+                posArr[i * 3] = ox + (dx - ox) * disperseFactor;
+                posArr[i * 3 + 1] = oy + (dy - oy) * disperseFactor;
+                posArr[i * 3 + 2] = oz + (dz - oz) * disperseFactor;
+            }
+            treeParticles.geometry.attributes.position.needsUpdate = true;
+
+            // Xoắn ốc chạy lên
+            spiralProgress += 0.012;
+            if (spiralProgress > 1.2) spiralProgress = 0;
+
+            const spiralPositions = spiralPoints.geometry.attributes.position.array;
+            for (let i = 0; i < spiralCount; i++) {
+                const t = i / spiralCount;
+                if (t < spiralProgress && !isDispersed) {
+                    spiralPositions[i * 3 + 1] = t * treeHeight;
+                } else {
+                    spiralPositions[i * 3 + 1] = -100;
+                }
+            }
+            spiralPoints.geometry.attributes.position.needsUpdate = true;
+
+            // Tuyết rơi
+            const snowPositions = snowParticles.geometry.attributes.position.array;
+            for (let i = 0; i < snowCount; i++) {
+                snowPositions[i * 3 + 1] -= 0.04;
+                if (snowPositions[i * 3 + 1] < 0) snowPositions[i * 3 + 1] = 50;
+            }
+            snowParticles.geometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 8. MEDIAPIPE HANDS GESTURE CONTROL ---
+        const videoElement = document.getElementById('webcam');
+        const wishCard = document.getElementById('wish-card');
+        const galleryCard = document.getElementById('gallery-card');
+
+        function closeAll() {
+            wishCard.classList.remove('active');
+            galleryCard.classList.remove('active');
+            isDispersed = false;
+        }
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+
+                // 1. Mở bàn tay (Open Hand) 🖐️ -> Tản cây & Mở Ảnh
+                const isOpenHand = landmarks[8].y < landmarks[6].y && 
+                                   landmarks[12].y < landmarks[10].y && 
+                                   landmarks[16].y < landmarks[14].y && 
+                                   landmarks[20].y < landmarks[18].y;
+
+                // 2. Giơ ngón cái (Thumbs Up) 👍 -> Bật Lời Chúc
+                const isThumbUp = landmarks[4].y < landmarks[3].y && 
+                                  landmarks[8].y > landmarks[6].y && 
+                                  landmarks[12].y > landmarks[10].y &&
+                                  landmarks[16].y > landmarks[14].y;
+
+                // 3. Nắm đấm (Fist) 👊 -> Đóng tất cả
+                const isFist = landmarks[8].y > landmarks[6].y && 
+                               landmarks[12].y > landmarks[10].y && 
+                               landmarks[16].y > landmarks[14].y && 
+                               landmarks[20].y > landmarks[18].y;
+
+                if (isFist) {
+                    closeAll();
+                } else if (isOpenHand) {
+                    isDispersed = true;
+                    galleryCard.classList.add('active');
+                    wishCard.classList.remove('active');
+                } else if (isThumbUp) {
+                    isDispersed = false;
+                    wishCard.classList.add('active');
+                    galleryCard.classList.remove('active');
+                }
+            }
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.65
+        });
+        hands.onResults(onResults);
+
+        const cameraMediaPipe = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 320,
+            height: 240
+        });
+        cameraMediaPipe.start();
+
+        // Chạm vào màn hình để đóng nếu cần
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.overlay-card') && !e.target.closest('#cam-box')) {
+                closeAll();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
