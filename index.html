@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cây Thông Noel 3D CGI Ultra HD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #010309;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        /* Ô vuông nhỏ góc trên bên phải - Hiệu ứng neon cầu vồng */
+        #cam-box {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+            z-index: 20;
+            overflow: hidden;
+            padding: 3px;
+            background: linear-gradient(45deg, #ff007f, #00f0ff, #00ff66, #ff00ff);
+            background-size: 300% 300%;
+            animation: colorfulGlow 3s ease infinite;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.8), 0 0 40px rgba(255, 0, 127, 0.5);
+        }
+
+        @keyframes colorfulGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 13px;
+            transform: scaleX(-1);
+        }
+
+        /* Card Lời Chúc */
+        .overlay-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.7);
+            background: rgba(8, 16, 35, 0.92);
+            border: 2px solid rgba(0, 240, 255, 0.6);
+            box-shadow: 0 0 50px rgba(0, 200, 255, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 25px;
+            text-align: center;
+            color: #fff;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            width: 350px;
+        }
+
+        .overlay-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .overlay-card img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.5);
+        }
+
+        .overlay-card h2 {
+            font-size: 24px;
+            color: #8ae5ff;
+            text-shadow: 0 0 15px #00a2ff, 0 0 30px #00f0ff;
+            margin-bottom: 10px;
+        }
+
+        .overlay-card p {
+            font-size: 15px;
+            color: #e0f4ff;
+            line-height: 1.6;
+        }
+
+        /* Gallery 4 Ảnh Phong Cách Lưới Modern */
+        .gallery-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.7);
+            background: rgba(6, 12, 28, 0.94);
+            border: 2px solid rgba(255, 0, 150, 0.6);
+            box-shadow: 0 0 60px rgba(255, 0, 150, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(25px);
+            border-radius: 28px;
+            padding: 20px;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 360px;
+            max-width: 92%;
+        }
+
+        .gallery-container.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .gallery-container h2 {
+            font-size: 20px;
+            color: #ff9de2;
+            text-shadow: 0 0 10px #ff00a2;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            height: 110px;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .photo-item:hover img {
+            transform: scale(1.1);
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div id="webgl-container"></div>
+    
+    <!-- Ô vuông nhỏ góc trên bên phải -->
+    <div id="cam-box">
+        <video id="webcam" playsinline></video>
+    </div>
+
+    <!-- Hộp Lời Chúc (👍) -->
+    <div class="overlay-card" id="wish-card">
+        <img src="https://images.unsplash.com/photo-1543589077-47d51606c1bf?auto=format&fit=crop&w=600&q=80" alt="Merry Christmas">
+        <h2>Merry Christmas! 🎄✨</h2>
+        <p>Chúc bạn một mùa Giáng Sinh an lành, ngập tràn ánh sáng hạnh phúc, may mắn và thành công rực rỡ!</p>
+    </div>
+
+    <!-- Hộp 4 Ảnh Kỷ Niệm (🖐️) -->
+    <div class="gallery-container" id="gallery-card">
+        <h2>❄️ Kỷ Niệm Mùa Đông ❄️</h2>
+        <div class="photo-grid">
+            <div class="photo-item"><img src="https://images.unsplash.com/photo-1543589077-47d51606c1bf?auto=format&fit=crop&w=400&q=80" alt="Noel 1"></div>
+            <div class="photo-item"><img src="https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&w=400&q=80" alt="Noel 2"></div>
+            <div class="photo-item"><img src="https://images.unsplash.com/photo-1545671913-b89ac1b4ac10?auto=format&fit=crop&w=400&q=80" alt="Noel 3"></div>
+            <div class="photo-item"><img src="https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80" alt="Noel 4"></div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x010309, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 36);
+        camera.lookAt(0, 12, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.2, 'rgba(220,248,255,0.95)');
+            gradient.addColorStop(0.5, 'rgba(0,180,255,0.5)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+        const particleTexture = createGlowTexture();
+
+        // --- CÂY THÔNG 3D KẾT HỢP QUẢ CHÂU ---
+        const particleCount = 28000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const originalPositions = new Float32Array(particleCount * 3);
+        const dispersedPositions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        const treeHeight = 25;
+        const baseRadius = 10.5;
+
+        for (let i = 0; i < particleCount; i++) {
+            const ratio = Math.pow(Math.random(), 1.25);
+            const y = ratio * treeHeight;
+            const layerEffect = Math.sin(y * 1.5) * 0.4;
+            const radius = ((1 - ratio) * baseRadius + layerEffect) * (0.85 + Math.random() * 0.35);
+            const angle = Math.random() * Math.PI * 2;
+
+            const x = Math.cos(angle) * Math.max(radius, 0.5);
+            const z = Math.sin(angle) * Math.max(radius, 0.5);
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            originalPositions[i * 3] = x;
+            originalPositions[i * 3 + 1] = y;
+            originalPositions[i * 3 + 2] = z;
+
+            const disperseRadius = radius * (2.8 + Math.random() * 2);
+            dispersedPositions[i * 3] = Math.cos(angle) * disperseRadius;
+            dispersedPositions[i * 3 + 1] = y + (Math.random() - 0.5) * 10;
+            dispersedPositions[i * 3 + 2] = Math.sin(angle) * disperseRadius;
+
+            const color = new THREE.Color();
+            const colorRand = Math.random();
+            if (colorRand > 0.82) {
+                color.setHSL(0.12, 1.0, 0.65); // Quả châu Vàng Gold
+            } else if (colorRand > 0.68) {
+                color.setHSL(0.0, 0.9, 0.6);   // Quả châu Đỏ Ruby
+            } else if (colorRand > 0.4) {
+                color.setHSL(0.53, 1.0, 0.85); // Xanh lam sáng lấp lánh
+            } else {
+                color.setHSL(0.5, 0.2, 0.98);  // Trắng bạc sương giá
+            }
+
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = (colorRand > 0.68) ? Math.random() * 0.7 + 0.4 : Math.random() * 0.4 + 0.15;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.38,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const treeParticles = new THREE.Points(geometry, material);
+        scene.add(treeParticles);
+
+        // --- NGÔI SAO SONY CGI ULTRA HD ĐỈNH CAO ---
+        const starGroup = new THREE.Group();
+        starGroup.position.set(0, treeHeight + 1.2, 0);
+
+        // Khối đa diện tinh thể sắc cạnh bên trong
+        const starCoreGeo = new THREE.OctahedronGeometry(1.5, 0);
+        const starCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false });
+        const starCore = new THREE.Mesh(starCoreGeo, starCoreMat);
+        starGroup.add(starCore);
+
+        // Khối đa diện thứ 2 lồng xoay chiều tạo hiệu ứng CGI phức tạp
+        const starOuterGeo = new THREE.IcosahedronGeometry(1.8, 0);
+        const starOuterMat = new THREE.MeshBasicMaterial({ color: 0x88eeff, wireframe: true, transparent: true, opacity: 0.6 });
+        const starOuter = new THREE.Mesh(starOuterGeo, starOuterMat);
+        starGroup.add(starOuter);
+
+        // Các lớp hào quang tỏa tia sáng rực rỡ (Starburst Bloom)
+        const starGlowMat1 = new THREE.SpriteMaterial({
+            map: particleTexture,
+            color: 0xffffff,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const starGlow1 = new THREE.Sprite(starGlowMat1);
+        starGlow1.scale.set(16, 16, 1);
+        starGroup.add(starGlow1);
+
+        const starGlowMat2 = new THREE.SpriteMaterial({
+            map: particleTexture,
+            color: 0x00c3ff,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const starGlow2 = new THREE.Sprite(starGlowMat2);
+        starGlow2.scale.set(8, 8, 1);
+        starGroup.add(starGlow2);
+
+        scene.add(starGroup);
+
+        // --- DẢI ÁNH SÁNG XOẮN ỐC ---
+        const spiralCount = 1800;
+        const spiralGeo = new THREE.BufferGeometry();
+        const spiralPos = new Float32Array(spiralCount * 3);
+        const spiralColors = new Float32Array(spiralCount * 3);
+
+        for (let i = 0; i < spiralCount; i++) {
+            const t = i / spiralCount;
+            const y = t * treeHeight;
+            const angle = t * Math.PI * 18; 
+            const radius = (1 - t) * (baseRadius + 0.6);
+
+            spiralPos[i * 3] = Math.cos(angle) * radius;
+            spiralPos[i * 3 + 1] = y;
+            spiralPos[i * 3 + 2] = Math.sin(angle) * radius;
+
+            const c = new THREE.Color().setHSL(0.52, 1.0, 0.85);
+            spiralColors[i * 3] = c.r;
+            spiralColors[i * 3 + 1] = c.g;
+            spiralColors[i * 3 + 2] = c.b;
+        }
+
+        spiralGeo.setAttribute('position', new THREE.BufferAttribute(spiralPos, 3));
+        spiralGeo.setAttribute('color', new THREE.BufferAttribute(spiralColors, 3));
+
+        const spiralMat = new THREE.PointsMaterial({
+            size: 0.6,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const spiralPoints = new THREE.Points(spiralGeo, spiralMat);
+        scene.add(spiralPoints);
+
+        // Tuyết rơi
+        const snowCount = 2000;
+        const snowGeo = new THREE.BufferGeometry();
+        const snowPos = new Float32Array(snowCount * 3);
+
+        for (let i = 0; i < snowCount; i++) {
+            snowPos[i * 3] = (Math.random() - 0.5) * 60;
+            snowPos[i * 3 + 1] = Math.random() * 50;
+            snowPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+        }
+
+        snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+        const snowMat = new THREE.PointsMaterial({
+            size: 0.25,
+            color: 0xffffff,
+            map: particleTexture,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
+
+        const snowParticles = new THREE.Points(snowGeo, snowMat);
+        scene.add(snowParticles);
+
+        let spiralProgress = 0;
+        let isDispersed = false;
+        let disperseFactor = 0;
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            treeParticles.rotation.y = elapsedTime * 0.12;
+            spiralPoints.rotation.y = elapsedTime * 0.12;
+            
+            // Hiệu ứng ngôi sao Sony CGI: xoay đảo chiều phức tạp & nhịp thở ánh sáng
+            starGroup.rotation.y = -elapsedTime * 0.5;
+            starGroup.rotation.z = Math.sin(elapsedTime * 3) * 0.15;
+            starOuter.rotation.x = elapsedTime * 0.8;
+            const pulse = 1 + Math.sin(elapsedTime * 5) * 0.15;
+            starGlow1.scale.set(16 * pulse, 16 * pulse, 1);
+
+            const targetFactor = isDispersed ? 1 : 0;
+            disperseFactor += (targetFactor - disperseFactor) * 0.05;
+
+            const posArr = treeParticles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const ox = originalPositions[i * 3];
+                const oy = originalPositions[i * 3 + 1];
+                const oz = originalPositions[i * 3 + 2];
+
+                const dx = dispersedPositions[i * 3];
+                const dy = dispersedPositions[i * 3 + 1];
+                const dz = dispersedPositions[i * 3 + 2];
+
+                posArr[i * 3] = ox + (dx - ox) * disperseFactor;
+                posArr[i * 3 + 1] = oy + (dy - oy) * disperseFactor;
+                posArr[i * 3 + 2] = oz + (dz - oz) * disperseFactor;
+            }
+            treeParticles.geometry.attributes.position.needsUpdate = true;
+
+            spiralProgress += 0.012;
+            if (spiralProgress > 1.2) spiralProgress = 0;
+
+            const spiralPositions = spiralPoints.geometry.attributes.position.array;
+            for (let i = 0; i < spiralCount; i++) {
+                const t = i / spiralCount;
+                if (t < spiralProgress && !isDispersed) {
+                    spiralPositions[i * 3 + 1] = t * treeHeight;
+                } else {
+                    spiralPositions[i * 3 + 1] = -100;
+                }
+            }
+            spiralPoints.geometry.attributes.position.needsUpdate = true;
+
+            const snowPositions = snowParticles.geometry.attributes.position.array;
+            for (let i = 0; i < snowCount; i++) {
+                snowPositions[i * 3 + 1] -= 0.04;
+                if (snowPositions[i * 3 + 1] < 0) snowPositions[i * 3 + 1] = 50;
+            }
+            snowParticles.geometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Nhận diện tay
+        const videoElement = document.getElementById('webcam');
+        const wishCard = document.getElementById('wish-card');
+        const galleryCard = document.getElementById('gallery-card');
+
+        function closeAll() {
+            wishCard.classList.remove('active');
+            galleryCard.classList.remove('active');
+            isDispersed = false;
+        }
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+
+                const isOpenHand = landmarks[8].y < landmarks[6].y && 
+                                   landmarks[12].y < landmarks[10].y && 
+                                   landmarks[16].y < landmarks[14].y && 
+                                   landmarks[20].y < landmarks[18].y;
+
+                const isThumbUp = landmarks[4].y < landmarks[3].y && 
+                                  landmarks[8].y > landmarks[6].y && 
+                                  landmarks[12].y > landmarks[10].y &&
+                                  landmarks[16].y > landmarks[14].y;
+
+                const isFist = landmarks[8].y > landmarks[6].y && 
+                               landmarks[12].y > landmarks[10].y && 
+                               landmarks[16].y > landmarks[14].y && 
+                               landmarks[20].y > landmarks[18].y;
+
+                if (isFist) {
+                    closeAll();
+                } else if (isOpenHand) {
+                    isDispersed = true;
+                    galleryCard.classList.add('active');
+                    wishCard.classList.remove('active');
+                } else if (isThumbUp) {
+                    isDispersed = false;
+                    wishCard.classList.add('active');
+                    galleryCard.classList.remove('active');
+                }
+            }
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.65
+        });
+        hands.onResults(onResults);
+
+        const cameraMediaPipe = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 320,
+            height: 240
+        });
+        cameraMediaPipe.start();
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.overlay-card') && !e.target.closest('.gallery-container') && !e.target.closest('#cam-box')) {
+                closeAll();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
